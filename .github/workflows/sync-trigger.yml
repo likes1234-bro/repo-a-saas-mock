@@ -42,21 +42,35 @@ EOF
 
       - name: Trigger repo-b sync
         run: |
-          PAYLOAD=$(cat sync-task.json)
-          DISPATCH_BODY="{\"event_type\":\"sync_from_saas\",\"client_payload\":${PAYLOAD}}"
+          # Read and compact JSON to single line
+          PAYLOAD=$(cat sync-task.json | jq -c .)
+
+          # Build dispatch request body
+          DISPATCH_BODY=$(jq -n \
+            --argjson payload "$PAYLOAD" \
+            '{event_type: "sync_from_saas", client_payload: $payload}')
+
           echo "Sending dispatch to repo-b..."
+          echo "Payload preview: $(echo "$DISPATCH_BODY" | jq -c . | head -c 200)..."
+
           RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
             -H "Authorization: token ${{ secrets.REPO_DISPATCH_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Content-Type: application/json" \
             "https://api.github.com/repos/${{ github.repository_owner }}/repo-b-oss-mock/dispatches" \
             -d "$DISPATCH_BODY")
+
           HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | head -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
           echo "Response code: $HTTP_CODE"
-          echo "Response body: $BODY"
+          if [ -n "$BODY" ]; then
+            echo "Response body: $BODY"
+          fi
+
           if [ "$HTTP_CODE" != "204" ]; then
             echo "ERROR: Dispatch failed with code $HTTP_CODE"
             exit 1
           fi
+
           echo "✅ Dispatch sent successfully"
