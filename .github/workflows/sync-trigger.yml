@@ -18,33 +18,45 @@ jobs:
       - name: Generate sync task
         run: |
           cat > sync-task.json << 'EOF'
-          {
-            "source_repo": "${{ github.repository }}",
-            "source_pr": "${{ github.event.inputs.pr_number }}",
-            "source_commit": "${{ github.sha }}",
-            "sync_type": "feature_enhancement",
-            "summary": "Add maximum length validation to username validator",
-            "target_files": ["src/validators/username.js"],
-            "instruction": "Add a maximum length check (50 characters) to the validateUsername function. The validation should reject usernames longer than 50 characters with an appropriate error message. This should be added after the minimum length check and before the character format validation. Do not include any SaaS-specific logic like tenant validation or enterprise domain checks.",
-            "test_points": [
-              "Username with 51 characters should fail validation",
-              "Username with exactly 50 characters should pass validation",
-              "Username with 49 characters should pass validation",
-              "Error message should clearly indicate the maximum length limit"
-            ],
-            "context": {
-              "changes_summary": "Added maximum length parameter and validation logic to prevent excessively long usernames",
-              "saas_specific_parts": "None in this change - this is pure generic validation logic"
-            }
-          }
-          EOF
+{
+  "source_repo": "${{ github.repository }}",
+  "source_pr": "${{ github.event.inputs.pr_number }}",
+  "source_commit": "${{ github.sha }}",
+  "sync_type": "feature_enhancement",
+  "summary": "Add maximum length validation to username validator",
+  "target_files": ["src/validators/username.js"],
+  "instruction": "Add a maximum length check (50 characters) to the validateUsername function. The validation should reject usernames longer than 50 characters with an appropriate error message. This should be added after the minimum length check and before the character format validation. Do not include any SaaS-specific logic like tenant validation or enterprise domain checks.",
+  "test_points": [
+    "Username with 51 characters should fail validation",
+    "Username with exactly 50 characters should pass validation",
+    "Username with 49 characters should pass validation",
+    "Error message should clearly indicate the maximum length limit"
+  ],
+  "context": {
+    "changes_summary": "Added maximum length parameter and validation logic to prevent excessively long usernames",
+    "saas_specific_parts": "None in this change - this is pure generic validation logic"
+  }
+}
+EOF
           cat sync-task.json
 
       - name: Trigger repo-b sync
         run: |
-          curl -X POST \
+          PAYLOAD=$(cat sync-task.json)
+          DISPATCH_BODY="{\"event_type\":\"sync_from_saas\",\"client_payload\":${PAYLOAD}}"
+          echo "Sending dispatch to repo-b..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
             -H "Authorization: token ${{ secrets.REPO_DISPATCH_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/${{ github.repository_owner }}/repo-b-oss-mock/dispatches \
-            -d @sync-task.json \
-            -d '{"event_type":"sync_from_saas","client_payload":'"$(cat sync-task.json)"'}'
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${{ github.repository_owner }}/repo-b-oss-mock/dispatches" \
+            -d "$DISPATCH_BODY")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -1)
+          echo "Response code: $HTTP_CODE"
+          echo "Response body: $BODY"
+          if [ "$HTTP_CODE" != "204" ]; then
+            echo "ERROR: Dispatch failed with code $HTTP_CODE"
+            exit 1
+          fi
+          echo "✅ Dispatch sent successfully"
