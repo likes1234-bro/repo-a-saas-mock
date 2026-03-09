@@ -17,7 +17,7 @@ describe('Username Validator', () => {
     test('should reject username with invalid characters', () => {
       const result = validateUsername('user@name!');
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Username can only contain letters, numbers, hyphens, and underscores');
+      expect(result.error).toBe('Username can only contain letters, numbers, hyphens, underscores, @ and dots');
     });
 
     test('should accept valid username with letters and numbers', () => {

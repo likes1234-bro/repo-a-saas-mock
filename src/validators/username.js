@@ -30,15 +30,6 @@ function validateUsername(username, options = {}) {
     };
   }
 
-  // Generic validation: Check character format
-  const validFormat = /^[a-zA-Z0-9_-]+$/;
-  if (!validFormat.test(username)) {
-    return {
-      success: false,
-      error: 'Username can only contain letters, numbers, hyphens, and underscores'
-    };
-  }
-
   // SaaS-specific validation: Tenant domain validation
   if (options.tenantId) {
     const tenantValidation = validateTenantDomain(username, options.tenantId);
@@ -56,6 +47,15 @@ function validateUsername(username, options = {}) {
         error: `Username must belong to ${options.enterpriseDomain} domain`
       };
     }
+  }
+
+  // Generic validation: Check character format (after SaaS validations to allow email format)
+  const validFormat = /^[a-zA-Z0-9_@.-]+$/;
+  if (!validFormat.test(username)) {
+    return {
+      success: false,
+      error: 'Username can only contain letters, numbers, hyphens, underscores, @ and dots'
+    };
   }
 
   return {
