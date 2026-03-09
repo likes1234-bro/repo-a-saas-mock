@@ -1,0 +1,22 @@
+{
+  "name": "repo-a-saas-mock",
+  "version": "1.0.0",
+  "description": "SaaS repository mock for cross-repo sync testing",
+  "main": "src/validators/username.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": ["saas", "validation", "sync"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "src/**/*.js"
+    ]
+  }
+}
